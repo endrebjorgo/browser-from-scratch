@@ -23,8 +23,8 @@ impl Response {
             let header_line = lines[i];
             if header_line.contains(": ") {
                 // NOTE: No whitespace between key and ':'. (See standard)
-                if let Some((k, v)) = header_line.split_once(": ") {
-                    headers.insert(k.to_string(), v.trim().to_string());
+                if let Some((key, val)) = header_line.split_once(": ") {
+                    headers.insert(key.to_string(), val.trim().to_string());
                 }
             }
             i += 1;
@@ -39,9 +39,24 @@ impl Response {
             http_version: status_line[0].to_string(),
             status_code: status_line[1].to_string(),
             reason_phrase: status_line[2].to_string(),
-            headers: headers,
+            headers,
             body: body.to_string(),
         }
+    }
+
+    pub fn format(&self) -> String {
+        let mut msg = format!("{} {} {}\r\n", 
+            self.http_version,
+            self.status_code, 
+            self.reason_phrase
+        );
+
+        for (key, val) in &self.headers {
+            msg.push_str(&format!("{}: {}\r\n\r\n", key, val));
+        }
+
+        msg.push_str(&self.body);
+        return msg;
     }
 }
 
@@ -61,5 +76,23 @@ mod tests {
             &"19"
         );
         assert_eq!(&response.body, "Responded!");
+    }
+    
+    #[test]
+    fn test_response_format() {
+        let response = Response {
+            http_version: "HTTP/1.1".to_string(),
+            status_code: "200".to_string(),
+            reason_phrase: "OK".to_string(),
+            headers: HashMap::from([
+                ("Content-Length".to_string(), "19".to_string())
+            ]),
+            body: "Responded!".to_string(),
+        };
+        let formatted = response.format();
+        assert_eq!(
+            &formatted,
+            "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\nResponded!"
+        );
     }
 }
