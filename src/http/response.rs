@@ -95,4 +95,12 @@ mod tests {
             "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\nResponded!"
         );
     }
+
+    #[test]
+    fn test_response_parse_then_format() {
+        let msg = "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\nResponded!";
+        let parsed = Response::parse(msg);
+        let formatted = parsed.format();
+        assert_eq!(msg, &formatted);
+    }
 }

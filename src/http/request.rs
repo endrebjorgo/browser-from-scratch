@@ -94,4 +94,12 @@ mod tests {
             "GET / HTTP/1.1\r\nContent-Length: 11\r\n\r\nRequesting!"
         );
     }
+
+    #[test]
+    fn test_request_parse_then_format() {
+        let msg = "GET / HTTP/1.1\r\nContent-Length: 11\r\n\r\nRequesting!";
+        let parsed = Request::parse(msg);
+        let formatted = parsed.format();
+        assert_eq!(msg, &formatted);
+    }
 }
