@@ -52,9 +52,10 @@ impl Response {
         );
 
         for (key, val) in &self.headers {
-            msg.push_str(&format!("{}: {}\r\n\r\n", key, val));
+            msg.push_str(&format!("{}: {}\r\n", key, val));
         }
 
+        msg.push_str("\r\n");
         msg.push_str(&self.body);
         return msg;
     }
@@ -66,11 +67,15 @@ mod tests {
 
     #[test]
     fn test_response_parse() {
-        let msg = "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\nResponded!";
+        let msg = "HTTP/1.1 200 OK\r\nHost: example.com\r\nContent-Length: 19\r\n\r\nResponded!";
         let response = Response::parse(msg);
         assert_eq!(&response.http_version, "HTTP/1.1");
         assert_eq!(&response.status_code, "200");
         assert_eq!(&response.reason_phrase, "OK");
+        assert_eq!(
+            &response.headers.get("Host").unwrap().as_str(),
+            &"example.com"
+        );
         assert_eq!(
             &response.headers.get("Content-Length").unwrap().as_str(),
             &"19"
@@ -85,14 +90,16 @@ mod tests {
             status_code: "200".to_string(),
             reason_phrase: "OK".to_string(),
             headers: HashMap::from([
-                ("Content-Length".to_string(), "19".to_string())
+                ("Host".to_string(), "example.com".to_string()),
+                ("Content-Length".to_string(), "19".to_string()),
             ]),
             body: "Responded!".to_string(),
         };
         let formatted = response.format();
-        assert_eq!(
-            &formatted,
-            "HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\nResponded!"
+        // NOTE: Ordering of headers are arbitrary. Must find some solution.
+        assert!(
+            &formatted == "HTTP/1.1 200 OK\r\nHost: example.com\r\nContent-Length: 19\r\n\r\nResponded!" ||
+            &formatted == "HTTP/1.1 200 OK\r\nContent-Length: 19\r\nHost: example.com\r\n\r\nResponded!"
         );
     }
 
