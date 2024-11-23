@@ -6,6 +6,28 @@ use crate::http::response::Response;
 #[derive(Debug, PartialEq)]
 pub enum HttpMethod {
     GET,
+    POST,
+}
+
+impl std::fmt::Display for HttpMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            HttpMethod::GET => "GET",
+            HttpMethod::POST=> "POST",
+        };
+        write!(f, "{}", value)
+    }
+}
+
+impl std::str::FromStr for HttpMethod {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "GET" => Ok(HttpMethod::GET),
+            "POST" => Ok(HttpMethod::POST),
+            _ => Err(format!("'{}' is not a valid HttpMethod", s)),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -18,17 +40,35 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn get(url: &str) -> Self {
+    fn new(method: HttpMethod) -> Self {
         Self {
-            method: HttpMethod::GET,
+            method,
             target: "/".to_string(),
             http_version: "HTTP/1.1".to_string(),
-            headers: HashMap::from([
-                ("Host".to_string(), url.to_string()),
-                ("Connection".to_string(), "close".to_string()),
-            ]),
-            body: "".to_string(),
+            headers: HashMap::new(),
+            body: String::new(),
         }
+    }
+
+    pub fn get(url: &str) -> Self {
+        Self::new(HttpMethod::GET)
+            .add_header("Host", url)
+            .add_header("Connection", "close")
+    }
+
+    pub fn set_target(mut self, target: &str) -> Self {
+        self.target = target.to_string();
+        self
+    }
+
+    pub fn add_header(mut self, key: &str, val: &str) -> Self {
+        self.headers.insert(key.to_string(), val.to_string());
+        self
+    }
+
+    pub fn set_body(mut self, body: &str) -> Self {
+        self.body = body.to_string();
+        self
     }
 
     pub fn parse(message: &str) -> Self {
@@ -54,11 +94,8 @@ impl Request {
             body = lines[(i+1)..].join("\r\n");
         }
 
-        let method = match request_line[0] {
-            "GET" => HttpMethod::GET,
-            _ => unimplemented!(),
-        };
-
+        let method = request_line[0].parse::<HttpMethod>().unwrap();
+        
         Self {
             method,
             target: request_line[1].to_string(),
@@ -69,13 +106,8 @@ impl Request {
     }
 
     pub fn format(&self) -> String {
-        let method = match self.method {
-            HttpMethod::GET => "GET",
-            _ => unimplemented!(),
-        };
-
         let mut msg = format!("{} {} {}\r\n", 
-            method,
+            self.method.to_string(),
             self.target, 
             self.http_version
         );
