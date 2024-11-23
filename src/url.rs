@@ -2,14 +2,43 @@
 pub struct Url {
     scheme: String,
     netloc: String,
-    hostname: String,
-    port: String,
     path: String,
+    params: String,
     query: String,
     fragment: String,
+    hostname: String,
+    port: String,
 }
 
 impl Url {
+    pub fn get_url(&self) -> String {
+        let mut url = String::new();
+
+        if !self.scheme.is_empty() {
+            url.push_str(&self.scheme);
+            url.push_str("://");
+        }
+
+        url.push_str(&self.netloc);
+        url.push_str(&self.path);
+
+        if !self.query.is_empty() {
+            url.push_str("?");
+            url.push_str(&self.query);
+        }
+
+        if !self.params.is_empty() {
+            url.push_str(";");
+            url.push_str(&self.params);
+        }
+
+        if !self.fragment.is_empty() {
+            url.push_str("#");
+            url.push_str(&self.fragment);
+        }
+        url
+    }
+
     pub fn parse(url: &str) -> Self {
         let mut result = Url::default();
         let mut remaining_url = url;
@@ -19,36 +48,33 @@ impl Url {
             remaining_url = rest;
         }
 
-        if let Some((netloc, rest)) = remaining_url.split_once("/") {
-            result.netloc = netloc.to_string();     
+        if let Some((rest, fragment)) = remaining_url.split_once("#") {
+            result.fragment = fragment.to_string();
             remaining_url = rest;
         }
 
-        if let Some((hostname, port)) = result.netloc.split_once(":") {
-            result.hostname = hostname.to_string();     
-            result.port = port.to_string();     
-        } else {
-            result.hostname = result.netloc;     
-            result.port = match result.scheme.as_str() {
-                "https" => "443".to_string(),
-                "http" => "80".to_string(),
-                _ => unimplemented!(),
-            };
-            result.netloc = format!("{}:{}", result.hostname, result.port);
-        }
-
-        if let Some((path, rest)) = remaining_url.split_once("?") {
-            result.path = format!("/{}", path);
-            remaining_url = rest;
-        }
-
-        if let Some((query, rest)) = remaining_url.split_once("#") {
+        if let Some((rest, query)) = remaining_url.split_once("?") {
             result.query= query.to_string();
             remaining_url = rest;
         }
 
-        if !remaining_url.is_empty() {
-            result.fragment = remaining_url.to_string();
+        if let Some((rest, params)) = remaining_url.split_once(";") {
+            result.params = params.to_string();
+            remaining_url = rest;
+        }
+
+        if let Some((rest, path)) = remaining_url.split_once("/") {
+            result.path = format!("/{}", path);
+            remaining_url = rest;
+        } 
+
+        if let Some((hostname, port)) = remaining_url.split_once(":") {
+            result.hostname = hostname.to_string();     
+            result.port = port.to_string();     
+            result.netloc = remaining_url.to_string();
+        } else {
+            result.hostname = remaining_url.to_string();
+            result.netloc = remaining_url.to_string();
         }
         result
     }
